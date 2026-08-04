@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     CHROMA_DB_PATH: str | None = Field(default=None, env="CHROMA_DB_PATH")
     PDF_PATH: str | None = Field(default=None, env="PDF_PATH")
 
+    CHUNK_SIZE: int = Field(default=1000, env="CHUNK_SIZE")
+    CHUNK_OVERLAP: int = Field(default=200, env="CHUNK_OVERLAP")
+
     class Config:
         env_file = ".env"
         extra = "ignore"
