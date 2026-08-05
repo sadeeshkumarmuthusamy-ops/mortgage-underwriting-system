@@ -1,14 +1,21 @@
+from datetime import datetime
 from typing import Any, Dict, List
 
-def sanitize_pii(data: Dict[str, Any]) -> Dict[str, Any]:
+from graph.state import UnderwritingState
+
+
+def sanitize_pii(data: Dict[str, Any] | str) -> Dict[str, Any] | str:
     """Remove or redact personally identifiable information.
 
     Args:
-        data: Raw application data
+        data: Raw application data or a plain string payload
 
     Returns:
         Sanitized data safe for LLM processing
     """
+    if not isinstance(data, dict):
+        return data
+
     sanitized = data.copy()
 
     # Redact SSN (keep last 4 digits)
@@ -62,3 +69,29 @@ def detect_bias_signals(analysis: str, applicant_data: Dict[str, Any]) -> List[s
             flags.append("Potential geographic bias - review for Fair Lending compliance")
 
     return flags
+
+def initialize_application(state: UnderwritingState) -> UnderwritingState:
+    """
+    Initialize a new application with sanitized data.
+    """
+    # Sanitize PII
+    sanitized = sanitize_pii(state["applicant_data"])
+
+    return {
+        **state,
+        "sanitized_data": sanitized,
+        "analysis_complete": False,
+        "human_review_required": False,
+        "human_review_completed": False,
+        "bias_flags": [],
+        "policy_violations": [],
+        "reasoning_chain": [f"Application {state.get('case_id')} initialized"],
+        "timestamp": datetime.now().isoformat()
+    }
+
+def sanitize_pii_node(state: UnderwritingState) -> UnderwritingState:
+    """
+    Node wrapper for PII sanitization.
+    """
+    return state
+

@@ -2,6 +2,22 @@ from langchain_groq import ChatGroq
 from src.config.settings import settings
 
 
+class DummyLLM:
+    """Fallback model used when no credentials are configured."""
+
+    def invoke(self, messages):
+        return type(
+            "Response",
+            (),
+            {"content": "LLM unavailable: configure an API key to enable analysis."},
+        )()
+
+
+def get_llm_instance(provider_name: str):
+    """Create an LLM instance for the requested provider."""
+    return LLMProvider(provider_name).get_llm_instance()
+
+
 class LLMProvider():
     """
     A class to manage the LLM provider configuration and instantiation.
@@ -17,7 +33,7 @@ class LLMProvider():
         self.configured_groq_model = settings.GROQ_LLM_MODEL
         self.openai_api_base = settings.OPENAI_API_BASE
 
-    def get_llm_instance(self) -> ChatGroq:
+    def get_llm_instance(self):
         """
         Returns an instance of the LLM based on the specified provider.
 
@@ -34,6 +50,9 @@ class LLMProvider():
                 api_key=self.groq_api_key,
             )
         elif (self.model_name.startswith("openai")):
+            if not self.openai_api_key:
+                return DummyLLM()
+
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(
                 model=self.configured_openai_model,

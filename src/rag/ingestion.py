@@ -1,8 +1,8 @@
 import os
-import requests
 import tempfile
 from urllib.parse import urlparse
-import pypdf 
+
+import requests
 from langchain_community.document_loaders import PyPDFLoader
 
 def validate_and_load_pdf(url: str):
