@@ -1,34 +1,57 @@
-from pydantic_settings import BaseSettings
+import os
+from pathlib import Path
+
 from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _resolve_env_file() -> str | None:
+    start_path = Path(__file__).resolve()
+    for directory in [start_path.parent, *start_path.parents]:
+        candidate = directory / ".env"
+        if candidate.exists():
+            return str(candidate)
+    return None
+
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=_resolve_env_file(),
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+    )
+
     # App Settings
     PROJECT_NAME: str = "mortgage-underwriting-api"
-    
+
     # LLM Provider Configuration
     # Supports "openai", "anthropic", etc.
-    GROQ_LLM_PROVIDER: str = Field(default="groq", env="GROQ_LLM_PROVIDER")
-    GROQ_LLM_MODEL: str = Field(default="llama-3.1-8b-instant", env="GROQ_LLM_MODEL")
-    GROQ_LLM_TEMPERATURE: float = Field(default=0.0, env="GROQ_LLM_TEMPERATURE")
-    OPENAI_LLM_PROVIDER: str = Field(default="openai", env="OPENAI_LLM_PROVIDER")
-    OPENAI_LLM_MODEL: str = Field(default="gpt-4o-mini", env="OPENAI_LLM_MODEL")
-    OPENAI_LLM_TEMPERATURE: float = Field(default=0.0, env="OPENAI_LLM_TEMPERATURE")
-    
+    GROQ_LLM_PROVIDER: str = Field(default="groq")
+    GROQ_LLM_MODEL: str = Field(default="llama-3.1-8b-instant")
+    GROQ_LLM_TEMPERATURE: float = Field(default=0.0)
+    OPENAI_LLM_PROVIDER: str = Field(default="openai")
+    OPENAI_LLM_MODEL: str = Field(default="gpt-4o-mini")
+    OPENAI_LLM_TEMPERATURE: float = Field(default=0.0)
+
     # API Keys
-    GROQ_API_KEY: str | None = Field(default=None, env="GROQ_API_KEY")
-    ANTHROPIC_API_KEY: str | None = Field(default=None, env="ANTHROPIC_API_KEY")
-    OPENAI_API_KEY: str | None = Field(default=None, env="OPENAI_API_KEY")
-    OPENAI_API_BASE: str | None = Field(default=None, env="OPENAI_API_BASE")
-    TAVILY_API_KEY: str | None = Field(default=None, env="TAVILY_API_KEY")
-    CHROMA_DB_PATH: str | None = Field(default=None, env="CHROMA_DB_PATH")
-    PDF_PATH: str | None = Field(default=None, env="PDF_PATH")
+    GROQ_API_KEY: str | None = None
+    ANTHROPIC_API_KEY: str | None = None
+    OPENAI_API_KEY: str | None = None
+    OPENAI_API_BASE: str | None = None
+    TAVILY_API_KEY: str | None = None
+    CHROMA_DB_PATH: str | None = None
+    PDF_PATH: str | None = None
 
-    CHUNK_SIZE: int = Field(default=1000, env="CHUNK_SIZE")
-    CHUNK_OVERLAP: int = Field(default=200, env="CHUNK_OVERLAP")
+    CHUNK_SIZE: int = 1000
+    CHUNK_OVERLAP: int = 200
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
 
 # Global settings instance
 settings = Settings()
+
+
+def reload_settings() -> Settings:
+    global settings
+    settings = Settings()
+    return settings

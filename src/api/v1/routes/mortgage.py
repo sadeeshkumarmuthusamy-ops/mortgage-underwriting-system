@@ -80,4 +80,4 @@ async def credit_analyst(payload: str):
     print("🔍 Reasoning Chain:")
     for step in result.get("reasoning_chain", []):
         print(f"   → {step}")
-    return {"message": "documents in the url loaded to vector store"}
+    return {"message": result.get("credit_analysis", "No analysis generated"), "reasoning_chain": result.get("reasoning_chain", [])}

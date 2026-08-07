@@ -1,6 +1,10 @@
-﻿
+﻿from typing import Any
+
 from pydantic import ValidationError
+
 from src.models.payload_model import MortgagePayload
+
+
 class PayloadValidationService:
     """Validate incoming mortgage underwriting payloads using Pydantic."""
 

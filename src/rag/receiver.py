@@ -25,6 +25,7 @@ def retrieve_relevant_policies(query):
     # Implementation for retrieving relevant policies
     if not settings.OPENAI_API_KEY:
         embedding_function = DummyEmbeddings()
+        print("⚠️ OPENAI_API_KEY is not configured. Using DummyEmbeddings for policy retrieval.")
     else:
         from langchain_openai import OpenAIEmbeddings
 
