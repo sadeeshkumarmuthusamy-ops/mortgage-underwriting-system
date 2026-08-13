@@ -1,8 +1,8 @@
 
 from datetime import datetime
 
-from graph.state.UnderwritingState import UnderwritingState
-from utils.helper_functions import sanitize_pii
+from src.graph.state.UnderwritingState import UnderwritingState
+from src.utils.helper_functions import sanitize_pii
 
 
 def initialize_application(state: UnderwritingState) -> UnderwritingState:

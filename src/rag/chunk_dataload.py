@@ -1,10 +1,12 @@
 
+from typing import Any
+
 from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from typing import Any
-from rag.ingestion import validate_and_load_pdf
+
 from src.config.settings import settings
+from src.rag.ingestion import validate_and_load_pdf
 
 
 def create_policy_store(documents: Any):

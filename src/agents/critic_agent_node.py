@@ -1,8 +1,9 @@
 # @title 5.🔎 Critic Agent Implementation
 
-from graph.state.UnderwritingState import UnderwritingState
-from languagemodels.llmprovider import get_llm_instance
 from langchain.messages import HumanMessage, SystemMessage
+
+from src.graph.state.UnderwritingState import UnderwritingState
+from src.languagemodels.llmprovider import get_llm_instance
 
 
 def critic_agent_node(state: UnderwritingState) -> UnderwritingState:

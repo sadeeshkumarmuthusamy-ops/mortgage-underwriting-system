@@ -2,11 +2,11 @@ import json
 
 from langchain.messages import HumanMessage, SystemMessage
 
-from rag.receiver import retrieve_relevant_policies
-from src.graph.state import UnderwritingState
+from src.graph.state.UnderwritingState import UnderwritingState
 from src.languagemodels.llmprovider import get_llm_instance
-from tools.mortgage_tools import check_credit_score_policy
-from utils.helper_functions import detect_bias_signals
+from src.rag.receiver import retrieve_relevant_policies
+from src.tools.mortgage_tools import check_credit_score_policy
+from src.utils.helper_functions import detect_bias_signals
 
 
 def _normalize_app_data(app_data):

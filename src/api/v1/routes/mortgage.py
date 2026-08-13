@@ -1,12 +1,13 @@
+import json
 from datetime import datetime
-from unittest import result
 
 from fastapi import APIRouter, HTTPException, status
 
-from agents.credit_analyst_node import credit_analyst_node
-from rag.chunk_dataload import load_policy_store
+from src.graph.workflow import create_workflow
+from src.rag.chunk_dataload import load_policy_store
 from src.services.PayloadValidationService import PayloadValidationService
-from src.utils.helper_functions import initialize_application, sanitize_pii_node
+
+GRAPH = create_workflow()
 
 router = APIRouter(prefix="/mortgage", tags=["Chat & Agents"])
 service = PayloadValidationService()
@@ -41,13 +42,27 @@ async def load_rag_data(payload: str):
         )
     return {"message": "documents in the url loaded to vector store", "chunks": response}
 
-@router.post("/creditanalyst", summary="Load RAG data for mortgage underwriting.")
-async def credit_analyst(payload: str):
-    """Accepts requests to load RAG data for mortgage underwriting."""
+@router.post("/creditanalyst", summary="Run the underwriting graph for the mortgage application.")
+async def credit_analyst(payload: dict | str):
+    """Accepts a mortgage application payload and runs it through the underwriting graph."""
 
-    # Initialize state ONCE
-    initial_inputs = {
-        "case_id": "MTG-2025-001",
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"errors": [f"Invalid JSON payload: {exc.msg}"]},
+            ) from exc
+
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"errors": ["Payload must be a JSON object."]},
+        )
+
+    state = {
+        "case_id": payload.get("case_id", "MTG-2025-001"),
         "applicant_data": payload,
         "sanitized_data": {},
         "credit_analysis": None,
@@ -66,18 +81,20 @@ async def credit_analyst(payload: str):
         "bias_flags": [],
         "policy_violations": [],
         "reasoning_chain": [],
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+    }
+
+    config = {"configurable": {"thread_id": "test_case_1"}}
+    inputs = {
+        "case_id": "MTG-2025-001",
+        "applicant_data": payload,
         }
+    result = "";
+    for event in GRAPH.stream(inputs, config):
+        for node_name, node_output in event.items():
+            print(f"Node: {node_name}")
+    final_state = GRAPH.get_state(config)
 
-    TC_01_state_0 = initialize_application(initial_inputs)
-    TC_01_state_0 = sanitize_pii_node(TC_01_state_0)
-
-    TC_01_state_1 = credit_analyst_node(TC_01_state_0)
-
-    result = TC_01_state_1
-    print(result.get("credit_analysis", "No analysis generated"))
-
-    print("🔍 Reasoning Chain:")
-    for step in result.get("reasoning_chain", []):
-        print(f"   → {step}")
-    return {"message": result.get("credit_analysis", "No analysis generated"), "reasoning_chain": result.get("reasoning_chain", [])}
+    return {
+        "message": final_state
+    }

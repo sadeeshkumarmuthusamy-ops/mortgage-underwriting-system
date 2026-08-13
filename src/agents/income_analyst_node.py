@@ -1,11 +1,15 @@
 # @title 2.💵 Income Analyst Agent Implementation
-from graph.state import UnderwritingState
-from languagemodels.llmprovider import get_llm_instance
-from rag.receiver import retrieve_relevant_policies
-from src.tools.mortgage_tools import calculate_dti_ratio, calculate_total_debt_obligations,calculate_housing_expense_ratio
-from utils.helper_functions import detect_bias_signals
-from src.languagemodels.llmprovider import get_llm_instance
 from langchain.messages import HumanMessage, SystemMessage
+
+from src.graph.state.UnderwritingState import UnderwritingState
+from src.languagemodels.llmprovider import get_llm_instance
+from src.rag.receiver import retrieve_relevant_policies
+from src.tools.mortgage_tools import (
+    calculate_dti_ratio,
+    calculate_housing_expense_ratio,
+    calculate_total_debt_obligations,
+)
+from src.utils.helper_functions import detect_bias_signals
 
 
 def income_analyst_node(state: UnderwritingState) -> UnderwritingState:

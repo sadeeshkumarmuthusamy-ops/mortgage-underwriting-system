@@ -1,11 +1,12 @@
 # @title 4.🏠 Collateral Analyst Agent Implementation
 
-from graph.state import UnderwritingState
-from rag.receiver import retrieve_relevant_policies
-from src.tools.mortgage_tools import calculate_ltv_ratio
-from utils.helper_functions import detect_bias_signals
-from languagemodels.llmprovider import get_llm_instance
 from langchain.messages import HumanMessage, SystemMessage
+
+from src.graph.state.UnderwritingState import UnderwritingState
+from src.languagemodels.llmprovider import get_llm_instance
+from src.rag.receiver import retrieve_relevant_policies
+from src.tools.mortgage_tools import calculate_ltv_ratio
+from src.utils.helper_functions import detect_bias_signals
 
 
 def collateral_analyst_node(state: UnderwritingState) -> UnderwritingState:

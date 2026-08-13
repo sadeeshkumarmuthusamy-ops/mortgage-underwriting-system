@@ -1,12 +1,22 @@
 
-from langchain_community import memory
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
-from agents import asset_analyst_node, collateral_analyst_node, credit_analyst_node, critic_agent_node, decision_agent_node, income_analyst_node
-from graph import workflow
-from graph.node.supervisor_node import initialize_application, should_continue_to_agents, supervisor_node
-from graph.state import UnderwritingState
-from langgraph import MemorySaver
+import src.agents.asset_analyst_node  # noqa: F401
+import src.agents.collateral_analyst_node  # noqa: F401
+import src.agents.credit_analyst_node  # noqa: F401
+import src.agents.critic_agent_node  # noqa: F401
+import src.agents.decision_agent_node  # noqa: F401
+import src.agents.income_analyst_node  # noqa: F401
+from src.graph.node.supervisor_node import initialize_application, should_continue_to_agents, supervisor_node
+from src.graph.state.UnderwritingState import UnderwritingState
+
+asset_analyst_node = src.agents.asset_analyst_node.asset_analyst_node
+collateral_analyst_node = src.agents.collateral_analyst_node.collateral_analyst_node
+credit_analyst_node = src.agents.credit_analyst_node.credit_analyst_node
+critic_agent_node = src.agents.critic_agent_node.critic_agent_node
+decision_agent_node = src.agents.decision_agent_node.decision_agent_node
+income_analyst_node = src.agents.income_analyst_node.income_analyst_node
 
 def create_workflow() -> StateGraph:
     """
