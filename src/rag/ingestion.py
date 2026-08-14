@@ -1,3 +1,4 @@
+from logging import log
 import os
 import tempfile
 from urllib.parse import urlparse
@@ -17,7 +18,7 @@ def validate_and_load_pdf(url: str):
     except Exception:
         raise ValueError(f"Could not parse URL: {url}")
 
-    print(f"Verifying access to: {url}...")
+    log.info(f"Verifying access to: {url}...")
     try:
         response = requests.get(url, stream=True, timeout=10)
         
@@ -39,16 +40,16 @@ def validate_and_load_pdf(url: str):
                     temp_pdf.write(chunk)
             temp_file_path = temp_pdf.name
 
-        print(f"Downloading successful. Loading from temp source: {temp_file_path}")
+        log.info(f"Downloading successful. Loading from temp source: {temp_file_path}")
         
         loader = PyPDFLoader(temp_file_path)
         documents = loader.load()
         
-        print(f"Successfully loaded {len(documents)} pages.")
+        log.info(f"Successfully loaded {len(documents)} pages.")
 
         if temp_file_path and os.path.exists(temp_file_path):
-                    os.remove(temp_file_path)
-                    print("Temporary file cleaned up.")
+            os.remove(temp_file_path)
+            log.info("Temporary file cleaned up.")
 
         return documents
 

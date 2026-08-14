@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Dict, List
 
-from graph.state import UnderwritingState
+from src.graph.state.UnderwritingState import UnderwritingState
 
 
 def sanitize_pii(data: Dict[str, Any] | str) -> Dict[str, Any] | str:
@@ -94,4 +94,3 @@ def sanitize_pii_node(state: UnderwritingState) -> UnderwritingState:
     Node wrapper for PII sanitization.
     """
     return state
-

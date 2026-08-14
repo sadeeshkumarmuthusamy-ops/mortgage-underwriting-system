@@ -1,12 +1,10 @@
 import json
-
 from langchain.messages import HumanMessage, SystemMessage
-
-from rag.receiver import retrieve_relevant_policies
-from src.graph.state import UnderwritingState
+from src.graph.state.UnderwritingState import UnderwritingState
 from src.languagemodels.llmprovider import get_llm_instance
-from tools.mortgage_tools import check_credit_score_policy
-from utils.helper_functions import detect_bias_signals
+from src.rag.receiver import retrieve_relevant_policies
+from src.tools.mortgage_tools import check_credit_score_policy
+from src.utils.helper_functions import detect_bias_signals
 
 
 def _normalize_app_data(app_data):
@@ -33,16 +31,23 @@ def credit_analyst_node(state: UnderwritingState) -> UnderwritingState:
     - Overall creditworthiness
     """
 
-    policies = retrieve_relevant_policies(
-        "credit score requirements bankruptcies foreclosures late payments"
-    )
+    try:
+        policies = retrieve_relevant_policies(
+            "credit score requirements bankruptcies foreclosures late payments"
+        )
+    except Exception:
+        policies = "Policy retrieval unavailable; using local assessment only."
 
-    # Get sanitized application data
-    app_data = _normalize_app_data(state.get("sanitized_data", {}))
-
-    # Use calculator tool for credit score assessment
-    credit_score = app_data.get("credit_score", 0)
-    credit_score_analysis = check_credit_score_policy.invoke({"credit_score": credit_score})
+    try:
+        # Get sanitized application data
+        app_data = _normalize_app_data(state.get("sanitized_data", {}))
+        
+        # Use calculator tool for credit score assessment
+        credit_score = app_data.get("credit_score", 0)
+        credit_score_analysis = check_credit_score_policy.invoke({"credit_score": credit_score})
+    except Exception as e:
+        credit_score_analysis = f"Credit score assessment unavailable: {str(e)}"
+    
 
     # Build analysis prompt
     system_prompt = f"""
@@ -80,25 +85,36 @@ CREDIT HISTORY DATA:
 Provide your detailed credit analysis based on the ACCURATE assessment above.
 """
 
-    # Generate analysis using llm directly
-    llm =  get_llm_instance("openai")  # Assuming this function returns an LLM instance
-    response = llm.invoke([
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_prompt)
-    ])
-
-    # Extract analysis text
-    analysis = response.content
-
-    # Check for bias signals
-    bias_flags = detect_bias_signals(analysis, app_data)
-
-    # Update state
-    return {
-        **state,
-        "credit_analysis": analysis,
-        "bias_flags": state.get("bias_flags", []) + bias_flags,
-        "reasoning_chain": state.get("reasoning_chain", []) + [
-            f"Credit Analyst: Completed credit analysis for {app_data.get('case_id')}"
-        ]
-    }
+    try:
+        # Generate analysis using llm directly
+            llm =  get_llm_instance("openai")  # Assuming this function returns an LLM instance
+            response = llm.invoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ])
+        
+            # Extract analysis text
+            analysis = response.content
+        
+            # Check for bias signals
+            bias_flags = detect_bias_signals(analysis, app_data)
+        
+            # Update state
+            return {
+                **state,
+                "credit_analysis": analysis,
+                "bias_flags": state.get("bias_flags", []) + bias_flags,
+                "reasoning_chain": state.get("reasoning_chain", []) + [
+                    f"Credit Analyst: Completed credit analysis for {app_data.get('case_id')}"
+                ]
+            }
+    except Exception as e:
+        # Handle LLM invocation errors
+        analysis = f"Credit analysis unavailable due to error: {str(e)}"
+        return {
+            **state,
+            "credit_analysis": analysis,
+            "reasoning_chain": state.get("reasoning_chain", []) + [
+                f"Credit Analyst: Error during credit analysis for {app_data.get('case_id')}: {str(e)}"
+            ]
+        }
