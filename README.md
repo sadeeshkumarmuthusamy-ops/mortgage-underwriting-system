@@ -1,9 +1,3 @@
-Here is the comprehensive README content structured exactly as you requested.
-
-*Note: Since you requested this for a Word document, you can simply copy the rendered text below and paste it directly into Microsoft Word. Word will automatically recognize and preserve the headings, bullet points, and formatting.*
-
----
-
 # Mortgage Underwriting System
 
 ## Project Overview
