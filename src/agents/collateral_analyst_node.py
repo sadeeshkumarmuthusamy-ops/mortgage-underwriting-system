@@ -1,5 +1,3 @@
-# @title 4.🏠 Collateral Analyst Agent Implementation
-
 from langchain.messages import HumanMessage, SystemMessage
 
 from src.graph.state.UnderwritingState import UnderwritingState
@@ -19,24 +17,37 @@ def collateral_analyst_node(state: UnderwritingState) -> UnderwritingState:
     - Property condition and habitability
     - Collateral adequacy
     """
-    policies = retrieve_relevant_policies(
-        "appraisal property condition LTV collateral"
-    )
+    try:
+        app_data = state.get("sanitized_data") or state.get("applicant_data") or {}
+        if not isinstance(app_data, dict):
+            app_data = {}
 
-    app_data = state["sanitized_data"]
-    property_data = app_data.get('property', {})
-    loan = app_data.get('loan', {})
+        property_data = app_data.get('property', {}) if isinstance(app_data.get('property', {}), dict) else {}
+        loan = app_data.get('loan', {}) if isinstance(app_data.get('loan', {}), dict) else {}
+        case_id = app_data.get('case_id') or state.get('case_id') or 'UNKNOWN'
 
-    # Use calculator tool for accurate LTV calculation
-    loan_amount = loan.get('amount', 0)
-    appraised_value = property_data.get('appraised_value', 0)
+        try:
+            policies = retrieve_relevant_policies(
+                "appraisal property condition LTV collateral"
+            )
+        except Exception:
+            policies = "Policy retrieval unavailable; using local assessment only."
 
-    ltv_result = calculate_ltv_ratio.invoke({
-        "loan_amount": loan_amount,
-        "property_value": appraised_value
-    })
+        loan_amount = float(loan.get('amount', 0) or 0)
+        appraised_value = float(property_data.get('appraised_value', 0) or 0)
 
-    system_prompt = f"""
+        try:
+            ltv_result = calculate_ltv_ratio.invoke({
+                "loan_amount": loan_amount,
+                "property_value": appraised_value
+            })
+        except Exception:
+            ltv_result = (
+                f"LTV unavailable: loan amount ${loan_amount:,.2f}, "
+                f"appraised value ${appraised_value:,.2f}."
+            )
+
+        system_prompt = f"""
 You are a Senior Collateral Analyst with expertise in property valuation.
 
 RELEVANT POLICIES:
@@ -55,8 +66,8 @@ ANALYSIS FRAMEWORK:
 IMPORTANT: Use the EXACT LTV calculation provided below. Do not recalculate.
 """
 
-    user_prompt = f"""
-Analyze property collateral for case {app_data.get('case_id')}:
+        user_prompt = f"""
+Analyze property collateral for case {case_id}:
 
 PROPERTY:
 - Type: {property_data.get('type')}
@@ -66,7 +77,7 @@ PROPERTY:
 
 LOAN:
 - Loan Amount: ${loan_amount:,.2f}
-- Down Payment: ${loan.get('down_payment', 0):,.2f}
+- Down Payment: ${float(loan.get('down_payment', 0) or 0):,.2f}
 
 CALCULATED LTV (ACCURATE - DO NOT RECALCULATE):
 {ltv_result}
@@ -74,21 +85,43 @@ CALCULATED LTV (ACCURATE - DO NOT RECALCULATE):
 Provide your collateral analysis based on this ACCURATE calculation.
 """
 
-    llm = get_llm_instance("openai")  # Assuming this function returns an LLM instance
-    # Generate analysis using llm directly
-    response = llm.invoke([
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_prompt)
-    ])
+        try:
+            llm = get_llm_instance("openai")
+            response = llm.invoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ])
+            analysis = getattr(response, "content", None) or (
+                f"Collateral review for case {case_id}: loan amount ${loan_amount:,.2f}, "
+                f"appraised value ${appraised_value:,.2f}. LTV result: {ltv_result}."
+            )
+        except Exception:
+            analysis = (
+                f"Collateral review for case {case_id}: loan amount ${loan_amount:,.2f}, "
+                f"appraised value ${appraised_value:,.2f}. LTV result: {ltv_result}. "
+                "Additional collateral documentation may be required."
+            )
 
-    analysis = response.content
-    bias_flags = detect_bias_signals(analysis, app_data)
+        bias_flags = detect_bias_signals(analysis, app_data)
 
-    return {
-        **state,
-        "collateral_analysis": analysis,
-        "bias_flags": state.get("bias_flags", []) + bias_flags,
-        "reasoning_chain": state.get("reasoning_chain", []) + [
-            f"Collateral Analyst: Completed property analysis (LTV from tool)"
-        ]
-    }
+        return {
+            **state,
+            "collateral_analysis": analysis,
+            "bias_flags": state.get("bias_flags", []) + bias_flags,
+            "reasoning_chain": state.get("reasoning_chain", []) + [
+                f"Collateral Analyst: Completed property analysis for {case_id}"
+            ]
+        }
+    except Exception as exc:
+        fallback_analysis = (
+            "Collateral analysis could not be completed due to a processing error. "
+            "The file was retained for manual review."
+        )
+        return {
+            **state,
+            "collateral_analysis": fallback_analysis,
+            "bias_flags": state.get("bias_flags", []),
+            "reasoning_chain": state.get("reasoning_chain", []) + [
+                f"Collateral Analyst: Error during collateral review: {exc}"
+            ]
+        }

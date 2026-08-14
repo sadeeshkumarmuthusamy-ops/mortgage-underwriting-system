@@ -1,5 +1,12 @@
 from langchain.tools import tool
 
+
+def _to_float(value, field_name: str):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{field_name} must be a valid number.")
+
 @tool
 def calculate_dti_ratio(monthly_debt: float, monthly_income: float) -> str:
     """Calculate Debt-to-Income ratio.
@@ -11,11 +18,16 @@ def calculate_dti_ratio(monthly_debt: float, monthly_income: float) -> str:
     Returns:
         Formatted DTI ratio result
     """
-    if monthly_income <= 0:
-        return "Error: Monthly income must be greater than 0"
-
-    dti = (monthly_debt / monthly_income) * 100
-
+    try:
+        monthly_debt = _to_float(monthly_debt, "monthly_debt")
+        monthly_income = _to_float(monthly_income, "monthly_income")
+        if monthly_income <= 0:
+                return "Error: Monthly income must be greater than 0"
+        
+        dti = (monthly_debt / monthly_income) * 100
+    except ValueError as exc:
+        return f"Error: {exc}"
+    
     result = {
         "dti_ratio": round(dti, 2),
         "monthly_debt": round(monthly_debt, 2),
@@ -24,6 +36,7 @@ def calculate_dti_ratio(monthly_debt: float, monthly_income: float) -> str:
     }
 
     return f"DTI Ratio: {result['dti_ratio']}% ({result['status']}) - Debt: ${result['monthly_debt']:,.2f}, Income: ${result['monthly_income']:,.2f}"
+
 
 @tool
 def calculate_ltv_ratio(loan_amount: float, property_value: float) -> str:
@@ -36,10 +49,16 @@ def calculate_ltv_ratio(loan_amount: float, property_value: float) -> str:
     Returns:
         Formatted LTV ratio result
     """
-    if property_value <= 0:
-        return "Error: Property value must be greater than 0"
+    try:
+        loan_amount = _to_float(loan_amount, "loan_amount")
+        property_value = _to_float(property_value, "property_value")
+        if property_value <= 0:
+                return "Error: Property value must be greater than 0"
+        
+        ltv = (loan_amount / property_value) * 100
 
-    ltv = (loan_amount / property_value) * 100
+    except ValueError as exc:
+        return f"Error: {exc}"
 
     result = {
         "ltv_ratio": round(ltv, 2),
@@ -49,6 +68,7 @@ def calculate_ltv_ratio(loan_amount: float, property_value: float) -> str:
     }
 
     return f"LTV Ratio: {result['ltv_ratio']}% ({result['status']}) - Loan: ${result['loan_amount']:,.2f}, Value: ${result['property_value']:,.2f}"
+
 
 @tool
 def calculate_reserves(liquid_assets: float, monthly_payment: float, required_months: int = 2) -> str:
@@ -62,11 +82,17 @@ def calculate_reserves(liquid_assets: float, monthly_payment: float, required_mo
     Returns:
         Formatted reserves analysis
     """
-    if monthly_payment <= 0:
-        return "Error: Monthly payment must be greater than 0"
-
-    months_coverage = liquid_assets / monthly_payment
-    required_amount = monthly_payment * required_months
+    try:
+        liquid_assets = _to_float(liquid_assets, "liquid_assets")
+        monthly_payment = _to_float(monthly_payment, "monthly_payment")
+        required_months = int(required_months)
+        if monthly_payment <= 0:
+                return "Error: Monthly payment must be greater than 0"
+        
+        months_coverage = liquid_assets / monthly_payment
+        required_amount = monthly_payment * required_months
+    except (TypeError, ValueError):
+        return "Error: liquid_assets, monthly_payment, and required_months must be valid numeric values."
 
     result = {
         "months_coverage": round(months_coverage, 1),
@@ -89,6 +115,12 @@ def calculate_housing_expense_ratio(monthly_payment: float, monthly_income: floa
     Returns:
         Formatted housing expense ratio
     """
+    try:
+        monthly_payment = _to_float(monthly_payment, "monthly_payment")
+        monthly_income = _to_float(monthly_income, "monthly_income")
+    except ValueError as exc:
+        return f"Error: {exc}"
+
     if monthly_income <= 0:
         return "Error: Monthly income must be greater than 0"
 
@@ -103,6 +135,7 @@ def calculate_housing_expense_ratio(monthly_payment: float, monthly_income: floa
 
     return f"Housing Ratio: {result['housing_ratio']}% ({result['status']}) - Payment: ${result['monthly_payment']:,.2f}, Income: ${result['monthly_income']:,.2f}"
 
+
 @tool
 def check_credit_score_policy(credit_score: int) -> str:
     """Check if credit score meets policy requirements.
@@ -113,23 +146,28 @@ def check_credit_score_policy(credit_score: int) -> str:
     Returns:
         Policy compliance result
     """
-    if credit_score >= 740:
-        tier = "Excellent"
-        rate_adjustment = "Best rates available"
-    elif credit_score >= 700:
-        tier = "Very Good"
-        rate_adjustment = "Favorable rates"
-    elif credit_score >= 660:
-        tier = "Good"
-        rate_adjustment = "Standard rates"
-    elif credit_score >= 620:
-        tier = "Fair"
-        rate_adjustment = "Higher rates, may require compensating factors"
-    else:
-        tier = "Below Minimum"
-        rate_adjustment = "Does not meet conventional loan requirements"
+    try:
+        credit_score = int(credit_score)
+        if credit_score >= 740:
+            tier = "Excellent"
+            rate_adjustment = "Best rates available"
+        elif credit_score >= 700:
+            tier = "Very Good"
+            rate_adjustment = "Favorable rates"
+        elif credit_score >= 660:
+            tier = "Good"
+            rate_adjustment = "Standard rates"
+        elif credit_score >= 620:
+            tier = "Fair"
+            rate_adjustment = "Higher rates, may require compensating factors"
+        else:
+            tier = "Below Minimum"
+            rate_adjustment = "Does not meet conventional loan requirements"
+    except (TypeError, ValueError):
+        return "Error: credit_score must be a valid integer."
 
     return f"Credit Score: {credit_score} - Tier: {tier} - {rate_adjustment}"
+
 
 @tool
 def check_large_deposits(deposits: list, monthly_income: float) -> str:
@@ -142,26 +180,40 @@ def check_large_deposits(deposits: list, monthly_income: float) -> str:
     Returns:
         Analysis of deposits requiring documentation
     """
-    threshold = monthly_income * 0.25  # 25% of monthly income
-    large_deposits = []
+    try:
+        monthly_income = _to_float(monthly_income, "monthly_income")
+        if not isinstance(deposits, list):
+            return "Error: deposits must be a list of deposit objects."
+        threshold = monthly_income * 0.25
+        large_deposits = []
 
-    for deposit in deposits:
-        amount = deposit.get('amount', 0)
-        if amount >= threshold:
-            large_deposits.append({
-                'amount': amount,
-                'date': deposit.get('date', 'Unknown'),
-                'sourcing_required': True
-            })
+        for deposit in deposits:
+            if not isinstance(deposit, dict):
+                continue
 
-    if not large_deposits:
-        return f"No large deposits identified (threshold: ${threshold:,.2f}). All deposits are acceptable."
+            amount = deposit.get('amount', 0)
+            try:
+                amount = _to_float(amount, "deposit amount")
+            except ValueError:
+                continue
 
-    result = f"Found {len(large_deposits)} large deposit(s) requiring documentation (threshold: ${threshold:,.2f}):\n"
-    for i, dep in enumerate(large_deposits, 1):
-        result += f"  {i}. ${dep['amount']:,.2f} on {dep['date']} - Sourcing documentation required\n"
+            if amount >= threshold:
+                large_deposits.append({
+                    'amount': amount,
+                    'date': deposit.get('date', 'Unknown'),
+                    'sourcing_required': True
+                })
 
+        if not large_deposits:
+            return f"No large deposits identified (threshold: ${threshold:,.2f}). All deposits are acceptable."
+
+        result = f"Found {len(large_deposits)} large deposit(s) requiring documentation (threshold: ${threshold:,.2f}):\n"
+        for i, dep in enumerate(large_deposits, 1):
+            result += f"  {i}. ${dep['amount']:,.2f} on {dep['date']} - Sourcing documentation required\n"
+    except ValueError as exc:
+        return f"Error: {exc}"
     return result
+
 
 @tool
 def calculate_total_debt_obligations(debts: dict, proposed_payment: float) -> str:
@@ -174,14 +226,26 @@ def calculate_total_debt_obligations(debts: dict, proposed_payment: float) -> st
     Returns:
         Total debt calculation
     """
-    current_debt = sum(debts.values())
+    try:
+        proposed_payment = _to_float(proposed_payment, "proposed_payment")
+    except ValueError as exc:
+        return f"Error: {exc}"
+
+    if not isinstance(debts, dict):
+        return "Error: debts must be a dictionary of debt names and amounts."
+
+    try:
+        current_debt = sum(float(v) for v in debts.values())
+    except (TypeError, ValueError):
+        return "Error: all debt values must be valid numbers."
+
     total_obligation = current_debt + proposed_payment
 
     result = {
         "current_debt": round(current_debt, 2),
         "proposed_payment": round(proposed_payment, 2),
         "total_obligation": round(total_obligation, 2),
-        "debt_breakdown": {k: round(v, 2) for k, v in debts.items()}
+        "debt_breakdown": {k: round(float(v), 2) for k, v in debts.items()}
     }
 
     breakdown = "\n".join([f"  - {k}: ${v:,.2f}" for k, v in result['debt_breakdown'].items()])

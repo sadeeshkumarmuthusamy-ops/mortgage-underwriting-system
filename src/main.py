@@ -1,3 +1,4 @@
+from logging import log
 import sys
 from pathlib import Path
 
@@ -11,11 +12,8 @@ from src.api.server import app
 
 def main():
     import uvicorn
-    print("Starting the FastAPI server...")
-    # graph = create_workflow()
-
+    log.info("Starting the FastAPI server...")
     uvicorn.run(app, host="127.0.0.1", port=8000)
-
 
 if __name__ == "__main__":
     main()

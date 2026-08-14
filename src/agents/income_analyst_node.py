@@ -1,4 +1,3 @@
-# @title 2.💵 Income Analyst Agent Implementation
 from langchain.messages import HumanMessage, SystemMessage
 
 from src.graph.state.UnderwritingState import UnderwritingState
@@ -95,21 +94,33 @@ CALCULATED HOUSING RATIO (ACCURATE - DO NOT RECALCULATE):
 Provide your detailed income analysis based on the ACCURATE calculations above.
 """
 
-    llm = get_llm_instance("openai")  # Assuming this function returns an LLM instance
-    # Generate analysis using llm directly
-    response = llm.invoke([
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_prompt)
-    ])
-
-    analysis = response.content
-    bias_flags = detect_bias_signals(analysis, app_data)
-
-    return {
-        **state,
-        "income_analysis": analysis,
-        "bias_flags": state.get("bias_flags", []) + bias_flags,
-        "reasoning_chain": state.get("reasoning_chain", []) + [
-            f"Income Analyst: Completed income analysis with DTI calculation"
-        ]
-    }
+    try:
+        llm = get_llm_instance("openai")  
+        
+        response = llm.invoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ])
+        
+        analysis = response.content
+        bias_flags = detect_bias_signals(analysis, app_data)
+        
+        return {
+                **state,
+                "income_analysis": analysis,
+                "bias_flags": state.get("bias_flags", []) + bias_flags,
+                "reasoning_chain": state.get("reasoning_chain", []) + [
+                    f"Income Analyst: Completed income analysis with DTI calculation"
+                ]
+            }
+    except Exception as e:
+        return {
+            **state,
+            "income_analysis": (
+                f"Income analysis could not be completed due to an error: {str(e)}. "
+                "Please ensure all income data is complete and retry."
+            ),
+            "reasoning_chain": state.get("reasoning_chain", []) + [
+                "Income Analyst: Encountered an error during analysis"
+            ]
+        }

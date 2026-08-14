@@ -94,4 +94,3 @@ def sanitize_pii_node(state: UnderwritingState) -> UnderwritingState:
     Node wrapper for PII sanitization.
     """
     return state
-

@@ -28,31 +28,43 @@ def supervisor_node(state: UnderwritingState) -> UnderwritingState:
     """
     Routes workflow to next agent or marks completion.
     """
-    # Check which analyses are complete
-    analyses_done = {
-        "credit": state.get("credit_analysis") is not None,
-        "income": state.get("income_analysis") is not None,
-        "asset": state.get("asset_analysis") is not None,
-        "collateral": state.get("collateral_analysis") is not None
-    }
+    try:
+        if not isinstance(state, dict):
+            raise TypeError("Supervisor received a non-dictionary state.")
 
-    # Route to first incomplete analysis
-    if not analyses_done["credit"]:
-        next_agent = "credit"
-    elif not analyses_done["income"]:
-        next_agent = "income"
-    elif not analyses_done["asset"]:
-        next_agent = "asset"
-    elif not analyses_done["collateral"]:
-        next_agent = "collateral"
-    else:
-        next_agent = "critic"  # All analyses complete
+        analyses_done = {
+            "credit": bool(state.get("credit_analysis")),
+            "income": bool(state.get("income_analysis")),
+            "asset": bool(state.get("asset_analysis")),
+            "collateral": bool(state.get("collateral_analysis"))
+        }
 
-    return {
-        **state,
-        "next_agent": next_agent,
-        "analysis_complete": all(analyses_done.values())
-    }
+        if not analyses_done["credit"]:
+            next_agent = "credit"
+        elif not analyses_done["income"]:
+            next_agent = "income"
+        elif not analyses_done["asset"]:
+            next_agent = "asset"
+        elif not analyses_done["collateral"]:
+            next_agent = "collateral"
+        else:
+            next_agent = "critic"
+
+        return {
+            **state,
+            "next_agent": next_agent,
+            "analysis_complete": all(analyses_done.values())
+        }
+    except Exception as exc:
+        fallback_state = dict(state) if isinstance(state, dict) else {}
+        fallback_state.update({
+            "next_agent": "credit",
+            "analysis_complete": False,
+            "reasoning_chain": fallback_state.get("reasoning_chain", []) + [
+                f"Supervisor: Routing error recovered: {exc}"
+            ]
+        })
+        return fallback_state
 
 def should_continue_to_agents(state: UnderwritingState) -> str:
     """

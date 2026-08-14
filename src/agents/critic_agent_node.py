@@ -1,7 +1,4 @@
-# @title 5.🔎 Critic Agent Implementation
-
 from langchain.messages import HumanMessage, SystemMessage
-
 from src.graph.state.UnderwritingState import UnderwritingState
 from src.languagemodels.llmprovider import get_llm_instance
 
@@ -50,17 +47,28 @@ BIAS FLAGS:
 Provide your critical review and synthesis.
 """
 
-    # Generate review using llm directly
-    llm = get_llm_instance("openai")  # Assuming this function returns an LLM instance
-    response = llm.invoke([
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_prompt)
-    ])
-
-    return {
-        **state,
-        "critic_review": response.content,
-        "reasoning_chain": state.get("reasoning_chain", []) + [
-            "Critic: Completed review of all specialist analyses"
-        ]
-    }
+    try:
+        llm = get_llm_instance("openai")  
+        response = llm.invoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ])
+        
+        return {
+                **state,
+                "critic_review": response.content,
+                "reasoning_chain": state.get("reasoning_chain", []) + [
+                    "Critic: Completed review of all specialist analyses"
+                ]
+            }
+    except Exception as e:
+        return {
+            **state,
+            "critic_review": (
+                f"Critic review could not be completed due to an error: {str(e)}. "
+                "Please ensure all analyses are complete and retry."
+            ),
+            "reasoning_chain": state.get("reasoning_chain", []) + [
+                "Critic: Encountered an error during review"
+            ]
+        }

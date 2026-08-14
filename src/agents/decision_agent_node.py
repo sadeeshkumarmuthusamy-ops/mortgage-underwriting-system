@@ -1,5 +1,3 @@
-# @title 6.⚖️ Decision Agent Implementation
-
 from langchain.messages import HumanMessage, SystemMessage
 
 from src.graph.state.UnderwritingState import UnderwritingState
@@ -62,47 +60,66 @@ Provide:
 3. CREDIT_MEMO: (comprehensive decision documentation)
 """
 
-    # Generate decision using llm directly
-    llm = get_llm_instance("openai")  # Assuming this function returns an LLM instance
-    response = llm.invoke([
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_prompt)
-    ])
+    try:
+        # Generate decision using llm directly
+            llm = get_llm_instance("openai")  # Assuming this function returns an LLM instance
+            response = llm.invoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ])
+        
+            # Parse response for risk score and decision
+            content = response.content
+        
+            # Extract risk score
+            risk_score = 50  # default
+            if "RISK_SCORE:" in content:
+                import re
+                match = re.search(r'RISK_SCORE:\s*(\d+)', content)
+                if match:
+                    risk_score = int(match.group(1))
+        
+            # Extract decision
+            decision = "CONDITIONAL_APPROVAL"  # default
+            if "APPROVED" in content and "CONDITIONAL" not in content:
+                decision = "APPROVED"
+            elif "DENIED" in content:
+                decision = "DENIED"
+            elif "CONDITIONAL_APPROVAL" in content or "CONDITIONAL APPROVAL" in content:
+                decision = "CONDITIONAL_APPROVAL"
+        
+            # Determine if human review needed (high risk or bias flags)
+            human_review_required = (
+                risk_score >= 65 or
+                len(state.get('bias_flags', [])) > 0 or
+                decision == "DENIED"
+            )
+        
+            return {
+                **state,
+                "decision_memo": content,
+                "risk_score": risk_score,
+                "final_decision": decision,
+                "human_review_required": human_review_required,
+                "reasoning_chain": state.get("reasoning_chain", []) + [
+                    f"Decision Agent: Final decision {decision} with risk score {risk_score}"
+                ]
+            }
+    except Exception as e:
+        # Handle LLM invocation errors
+        fallback_memo = (
+            "Final decision could not be completed due to a processing error. "
+            "The case was retained for manual review."
+        )
+        return {
+            **state,
+            "decision_memo": fallback_memo,
+            "risk_score": None,
+            "final_decision": None,
+            "human_review_required": True,
+            "reasoning_chain": state.get("reasoning_chain", []) + [
+                f"Decision Agent: Error during final decision for {state.get('case_id')}: {str(e)}"
+            ]
+        }
 
-    # Parse response for risk score and decision
-    content = response.content
-
-    # Extract risk score
-    risk_score = 50  # default
-    if "RISK_SCORE:" in content:
-        import re
-        match = re.search(r'RISK_SCORE:\s*(\d+)', content)
-        if match:
-            risk_score = int(match.group(1))
-
-    # Extract decision
-    decision = "CONDITIONAL_APPROVAL"  # default
-    if "APPROVED" in content and "CONDITIONAL" not in content:
-        decision = "APPROVED"
-    elif "DENIED" in content:
-        decision = "DENIED"
-    elif "CONDITIONAL_APPROVAL" in content or "CONDITIONAL APPROVAL" in content:
-        decision = "CONDITIONAL_APPROVAL"
-
-    # Determine if human review needed (high risk or bias flags)
-    human_review_required = (
-        risk_score >= 65 or
-        len(state.get('bias_flags', [])) > 0 or
-        decision == "DENIED"
-    )
-
-    return {
-        **state,
-        "decision_memo": content,
-        "risk_score": risk_score,
-        "final_decision": decision,
-        "human_review_required": human_review_required,
-        "reasoning_chain": state.get("reasoning_chain", []) + [
-            f"Decision Agent: Final decision {decision} with risk score {risk_score}"
-        ]
-    }
+    
