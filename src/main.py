@@ -12,7 +12,7 @@ from src.api.server import app
 
 def main():
     import uvicorn
-    log.info("Starting the FastAPI server...")
+    # log.info("Starting the FastAPI server...")
     uvicorn.run(app, host="127.0.0.1", port=8000)
 
 if __name__ == "__main__":
